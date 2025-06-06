@@ -2,11 +2,14 @@
 This project processes golf swing videos to automatically classify swing phases, annotate videos with predicted phases, and extract individual swing clips. It leverages MediaPipe Pose for landmark extraction and a RandomForestClassifier for phase classification.
 
 ## How to run
-Clone the repo, install requirements.txt and execute poseimg.ipynb.
+Clone the repo and install Python version 3.12.10 and requirements.txt. Then , 
+        1. To generate a labelled output with each frame labeled with its predicted class, execute the third last and second last cell in poseimg.ipynb. You also need to enter input video path and where you want to save the output video.
+        2. To extract swing clips from a video, specify the input and output path as before in last cell and execute.
+
 ## Python version
 Make sure that Python version 3.12.10 is install. Mediapipe  is not compatible with newer versions of Python.
 
-Features
+## What this code does
 Extracts pose landmarks from images using MediaPipe Pose.
 Builds a labeled dataset from images organized in class-based subfolders.
 Trains a RandomForestClassifier to recognize golf swing phases.
@@ -15,108 +18,39 @@ Classifies each frame in a video and saves frame-wise predictions.
 Annotates videos with predicted swing phases overlayed on each frame.
 Automatically segments long videos into individual swing clips (from "Address" to "Finish") and saves them.
 
-Project Structure
-Swing_events/
-Directory containing subfolders for each swing phase class. Each subfolder holds images for that class. 
+## Project Structure
+1. Swing_events : Directory containing subfolders for each swing phase class. Each subfolder holds images for that class. It has 7 folders corresponding to 7 swing phases - Address, Toe-up, Mid-Backswing, Top, Mid-Downswing, Impact, Mid-Follow-Through, Finish (images extracted from GolfDB dataset, link can be found here - https://www.kaggle.com/datasets/marcmarais/golfdb-entire-image) . For idle class images have extracted from LSP dataset. 
 
-pose_classifier.pkl
-Trained RandomForest model for swing phase classification.
+2. pose_classifier.pkl : Trained RandomForest model for swing phase classification.
 
-classified_frames.txt
-Text file with per-frame predictions for a given video.
+3. classified_frames.txt : Text file with per-frame predictions for a given video.
 
-swing_clips/
-Output directory for extracted swing clips.
+4. swing_clips : Output directory for extracted swing clips.
 
-Dependencies
-Python 3.x
 
-OpenCV (cv2)
-
-MediaPipe (mediapipe)
-
-NumPy (numpy)
-
-scikit-learn (sklearn)
-
-joblib
-
-Install dependencies using:
-
-bash
-pip install opencv-python mediapipe numpy scikit-learn joblib
-Usage
-1. Dataset Preparation
-Organize your dataset in the Swing_events folder.
-
-Each subfolder should be named after a swing phase (e.g., Address, Takeaway, etc.) and contain images for that phase.
-
-2. Feature Extraction and Model Training
-The script reads images, extracts pose landmarks, and builds feature vectors.
-
-It trains a RandomForestClassifier and saves the model as pose_classifier.pkl.
-
-3. Classifying Video Frames
-Use the trained model to predict the swing phase for each frame in a video.
-
-Results are saved in classified_frames.txt.
-
-4. Annotating Videos
-Annotate each frame of a video with the predicted swing phase.
-
-The annotated video is saved to disk (e.g., latest7.mp4).
-
-5. Swing Clip Extraction
-The script detects swing segments (from "Address" to "Finish") in a video.
-
-It saves each detected swing as a separate video clip in the output directory.
-
-Key Functions
-extract_pose_from_image(image_path)
-
-Extracts pose landmarks from an image and returns a flattened feature vector.
-
-process_dataset(base_folder, max_per_class=1350)
-
-Processes the dataset to build feature and label arrays.
-
-classify_video(video_path, model, pose, output_txt)
-
-Classifies each frame in a video and saves predictions.
-
-label_and_save_video(input_video_path, output_video_path, model, pose_model)
-
-Annotates and saves a video with predicted swing phases overlayed.
-
-extract_address_to_finish_segments(preds, min_swing_length)
-
-Identifies swing segments in the video based on phase predictions.
-
-save_swing_clips(video_path, segments, output_dir)
-
-Saves each detected swing segment as a separate video clip.
-
-Example Workflow
-python
-# Step 1: Process dataset and train the model
-X, y = process_dataset('Swing_events', max_per_class=1350)
-# Train/test split and model training as shown in the script
-
-# Step 2: Classify frames in a video
-classify_video('sample_vid1.mp4', model, pose, 'classified_frames.txt')
-
-# Step 3: Annotate and save labeled video
-label_and_save_video('sample_vid1.mp4', 'latest7.mp4', model, pose)
-
-# Step 4: Extract swing clips from a video
-frame_results = classify_video(video_path, model, pose)
-smoothed = smooth_predictions(frame_results, window_size=4)
-segments = extract_address_to_finish_segments(smoothed, min_swing_length=20)
-save_swing_clips(video_path, segments, output_dir='swing_clips4')
-Notes
 The code assumes a maximum of 1350 images per class for training.
 
-The swing phase classes are:
+### The swing phase classes are:
 "Address", "Takeaway", "Mid-Backswing", "Top", "Mid-Downswing", "Impact", "Follow-through", "Finish"
 
-Video segmentation requires both "Mid-Backswing" and "Mid-Downswing" phases to be present in a swing for extraction.
+### Smoothening of result 
+The function smooth_predictions() applies temporal smoothing to the raw frame-wise classification predictions from your model. This helps reduce noise caused by frame-to-frame fluctuations — for example, when a single frame is misclassified in the middle of an otherwise correctly predicted phase like "Mid-Backswing".
+
+For each frame, the most frequent label within a small surrounding window (e.g., 4 frames) is selected to replace the original prediction. This majority-voting approach helps eliminate brief misclassifications, resulting in more stable and accurate detection of complete swing segments.
+
+For example 
+Original predictions (noisy): [Address, Address, Top, Address, Mid-Backswing]
+
+After smoothening : [Address, Address, Address, Address, Address]
+
+### To qualify as a valid swing, the frame sequence must:
+
+1. Start with: The first "Address" in a sequence
+2. End with: The last "Finish" in a consecutive run
+3. Minimum Length: Must span at least min_swing_length frames
+4. Inclusion Rule:
+- Must contain at least one "Mid-Backswing"
+- Must contain at least one "Mid-Downswing"
+5. Noise Tolerance: Labels like "Idle", "NoPose", or other noise do not break the swing
+6. Restart Logic: If a second "Address" appears before a "Finish", restart the swing from the new "Address"
+
