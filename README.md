@@ -3,7 +3,8 @@ This project processes golf swing videos to automatically classify swing phases,
 
 ## How to run
 ### To make a prediction / run swing clips extractor
-Clone the repo and install Python version 3.12.10 and requirements.txt. Then , 
+Clone the repo and install Python version 3.12.10 and requirements.txt. Then ,
+
         1. To generate a labelled output with each frame labeled with its predicted class, execute the third last and second last cell in poseimg.ipynb. You also need to enter input video path and where you want to save the output video.
         
         2. To extract swing clips from a video, specify the input and output path as before in last cell and execute.
