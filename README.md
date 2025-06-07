@@ -9,6 +9,7 @@ Clone the repo and install Python version 3.12.10 and requirements.txt. Then ,
 
 ### To train the model again from scratch 
         1. Download the dataset from   https://drive.google.com/drive/folders/1zT9TWfjzsQVCo1euMMjUMXAddsAAiKQB?usp=sharing
+        2. Place the downloaded folder in same folder as other items and execute poseimg.ipynb.
 
 ## Python version
 Make sure that Python version 3.12.10 is install. Mediapipe  is not compatible with newer versions of Python.
